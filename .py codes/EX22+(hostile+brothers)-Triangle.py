@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[5]:
+
+
+from pyomo.environ import *
+import matplotlib.pyplot as plt
+import numpy as np
+import random 
+
+
+# In[6]:
+
+
+model = AbstractModel()
+model.N = Param(mutable=True)
+model.i = RangeSet(1, model.N)
+model.j = Set(initialize=model.i)
+model.a=Param(mutable=True)
+model.b=Param(mutable=True)
+
+
+def initval(model,i):
+    return random.uniform(0,1)
+
+model.x = Var(model.i , bounds=(0,model.b), within=NonNegativeReals, initialize=initval)
+model.y = Var(model.i ,bounds=(0,model.a) , within=NonNegativeReals, initialize=initval)
+model.r = Var(within=NonNegativeReals)
+def C1_rule(model,i,j):
+    if i!=j:
+        return (model.x[i]-model.x[j])**2+(model.y[i]-model.y[j])**2 >=model.r**2
+    else:
+        return Constraint.Skip
+model.C1   = Constraint(model.i,model.j, rule=C1_rule)
+
+def C2_rule(model,i):
+        return -model.a/model.b*model.x[i]+model.a >=model.y[i]
+model.C2   = Constraint(model.i, rule=C2_rule)
+
+
+model.obj = Objective(expr=model.r, sense=maximize)
+opt = SolverFactory('ipopt')
+#instance.display()
+
+
+# In[9]:
+
+
+#instance = model.create_instance("EX22.dat")
+model.a=1
+model.b=2
+model.N=10
+instance = model.create_instance()
+results = opt.solve(instance) # solves and updates instance
+
+
+# In[10]:
+
+
+X=[value(instance.x[i]) for i in instance.i]
+Y=[value(instance.y[i]) for i in instance.i]
+plt.scatter( X,Y,s=25,color='red')
+plt.xlabel('X')
+plt.ylabel('Y')
+plt.title('Hostile brothers for n='+str(value(instance.N)))
+print('Min distance is ',round(value(instance.r),3))
+
+
+# In[ ]:
+
+
+
+
